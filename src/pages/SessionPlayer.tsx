@@ -13,6 +13,7 @@ import { addRecord, updateFeeling } from "../features/history/store"
 import { useSession } from "../hooks/useSessions"
 import SideBadge from "../components/SideBadge"
 import IntensityGauge from "../components/IntensityGauge"
+import { useWakeLock } from "../hooks/useWakeLock"
 const display = "font-['Bricolage_Grotesque',system-ui,sans-serif]"
 
 export default function SessionPlayer() {
@@ -46,6 +47,7 @@ function SessionRunner({ session }: { session: Session }) {
   }, [])
 
   const state = useSyncExternalStore(subscribe, getSnapshot)
+  useWakeLock(state.status !== "finished")
   const [confirmQuit, setConfirmQuit] = useState(false)
   const wasRunningRef = useRef(false)
 
