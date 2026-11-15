@@ -47,16 +47,28 @@ export default function SessionsData() {
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget
     const file = input.files?.[0]
-    input.value = "" // permet de choisir deux fois le même fichier
     if (!file) return
 
     setStatus(null)
     if (file.size > MAX_FILE_SIZE) {
+      input.value = ""
       setErrors(["Ce fichier est trop volumineux (1 Mo maximum)."])
       return
     }
 
-    const result = parseSessionsFile(await file.text())
+    let text: string
+    try {
+      // On lit le fichier AVANT de vider l'input : sur Android, vider l'input
+      // invalide le fichier et la lecture échoue silencieusement.
+      text = await file.text()
+    } catch {
+      setErrors(["Impossible de lire ce fichier. Réessaie, ou choisis-le depuis un autre dossier."])
+      return
+    } finally {
+      input.value = "" // permet de choisir deux fois le même fichier
+    }
+
+    const result = parseSessionsFile(text)
     if (!result.ok) {
       setErrors(result.errors)
       return
@@ -97,7 +109,7 @@ export default function SessionsData() {
         <ActionRow title="Importer" description="Remplace tes séances par celles d'un fichier JSON. Ton historique est conservé.">
           <label className={`${secondaryButton} inline-block cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-[#5E8F73]`}>
             Importer
-            <input type="file" accept="application/json,.json" onChange={handleFile} className="sr-only" />
+            <input type="file" accept=".json,application/json,text/plain,application/octet-stream" onChange={handleFile} className="sr-only" />
           </label>
         </ActionRow>
 
