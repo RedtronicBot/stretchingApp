@@ -34,6 +34,8 @@ export default function SessionsData() {
   const [confirmReset, setConfirmReset] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const [status, setStatus] = useState<string | null>(null)
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState("")
 
   const cancelImport = useCallback(() => setPendingImport(null), [])
   const cancelReset = useCallback(() => setConfirmReset(false), [])
@@ -44,12 +46,23 @@ export default function SessionsData() {
     setStatus("Fichier exporté.")
   }
 
+  const processText = (text: string) => {
+    const result = parseSessionsFile(text)
+    if (!result.ok) {
+      setErrors(result.errors)
+      return
+    }
+    setErrors([])
+    setPendingImport(result.sessions)
+  }
+
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget
     const file = input.files?.[0]
     if (!file) return
 
-    setStatus(null)
+    setErrors([])
+    setStatus(`Fichier reçu : ${file.name} (${file.size} octets)`)
     if (file.size > MAX_FILE_SIZE) {
       input.value = ""
       setErrors(["Ce fichier est trop volumineux (1 Mo maximum)."])
@@ -68,13 +81,7 @@ export default function SessionsData() {
       input.value = "" // permet de choisir deux fois le même fichier
     }
 
-    const result = parseSessionsFile(text)
-    if (!result.ok) {
-      setErrors(result.errors)
-      return
-    }
-    setErrors([])
-    setPendingImport(result.sessions)
+    processText(text)
   }
 
   const confirmImport = () => {
@@ -112,6 +119,27 @@ export default function SessionsData() {
             <input type="file" accept=".json,application/json,text/plain,application/octet-stream" onChange={handleFile} className="sr-only" />
           </label>
         </ActionRow>
+
+        <ActionRow title="Coller un JSON" description="Plan B si l'import par fichier ne marche pas : colle le contenu du fichier.">
+          <button type="button" onClick={() => setPasteOpen((open) => !open)} className={secondaryButton}>
+            {pasteOpen ? "Fermer" : "Coller"}
+          </button>
+        </ActionRow>
+
+        {pasteOpen && (
+          <div className="flex flex-col gap-2">
+            <textarea
+              value={pasteText}
+              onChange={(event) => setPasteText(event.target.value)}
+              rows={8}
+              placeholder='{"version": 1, "sessions": [...]}'
+              className="w-full rounded-2xl border border-[#CBD8D8] bg-[#F6F9F8] p-3 font-mono text-[13px] dark:border-[#26404A] dark:bg-[#172A32]"
+            />
+            <button type="button" onClick={() => processText(pasteText)} disabled={pasteText.trim() === ""} className={secondaryButton}>
+              Valider le texte
+            </button>
+          </div>
+        )}
 
         <ActionRow title="Séances par défaut" description="Revient aux séances livrées avec l'appli.">
           <button type="button" onClick={() => setConfirmReset(true)} className={secondaryButton}>
